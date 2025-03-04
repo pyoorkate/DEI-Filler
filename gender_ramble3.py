@@ -115,6 +115,7 @@ def submit_form(district, complaints_text, pdf_filename):
     # Set up Selenium WebDriver
     chrome_options = Options()
     # chrome_options.add_argument("--headless")  # Run in headless mode (no GUI)
+    chrome_options.add_argument("--window-size=1920,1080")  # Set window size
     service = Service(executable_path="/opt/homebrew/bin/chromedriver")  # Replace with your ChromeDriver path
     driver = webdriver.Chrome(service=service, options=chrome_options)
 
@@ -122,8 +123,10 @@ def submit_form(district, complaints_text, pdf_filename):
         # Open the form URL
         driver.get("https://enddei.ed.gov/")
 
-        # Wait for the form to load
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "tipsForm")))
+        # Wait for the form to load completely
+        WebDriverWait(driver, 20).until(
+            EC.presence_of_element_located((By.ID, "tipsForm"))
+        )
 
         # Fill out the form
         # Email
@@ -148,17 +151,21 @@ def submit_form(district, complaints_text, pdf_filename):
         file_input.send_keys(absolute_pdf_path)  # Provide the full absolute path to the PDF file
 
         # Scroll the submit button into view
-        submit_button = driver.find_element(By.ID, "submitButton")
+        submit_button = WebDriverWait(driver, 20).until(
+            EC.element_to_be_clickable((By.ID, "submitButton"))
+        )
         driver.execute_script("arguments[0].scrollIntoView(true);", submit_button)
 
-        # Wait for the submit button to be clickable
-        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "submitButton")))
+        # Add a small delay to ensure the button is fully visible
+        time.sleep(1)
 
-        # Click the submit button
-        submit_button.click()
+        # Use JavaScript to click the button (bypassing potential overlays)
+        driver.execute_script("arguments[0].click();", submit_button)
 
         # Wait for submission to complete
-        time.sleep(5)
+        WebDriverWait(driver, 20).until(
+            EC.url_changes(driver.current_url)
+        )
         print("Form submitted successfully!")
     except Exception as e:
         print(f"An error occurred while submitting the form: {e}")
